@@ -33,39 +33,46 @@ struct FontInfo {
 
     int32_t len;
 
-    int32_t left;
+    int32_t horiBearingX;
 
-    int32_t top;
+    int32_t horiBearingY;
 
-    char var;
+    int32_t horiAdvance;
+
+    char character;
 };
 
 std::list<FontInfo> fontList;
 
 std::list<FontInfo>::iterator find(char character) {
     for (auto it = fontList.begin(); it != fontList.end(); it++) {
-        if (it->var == character) {
+        if (it->character == character) {
             return it;
         }
     }
     return fontList.end();
 }
 
-void insert(FT_Bitmap& bitmap, char character, FT_Int left, FT_Int top) {
+void insert(FT_GlyphSlot slot, char character) {
+    FontInfo fontInfo;
+
     if (fontList.end() != find(character)) {
         cout <<"character:" <<std::string(1, character) <<" already register!" <<endl;
         return ;
     }
 
-    FontInfo fontInfo;
+    FT_Bitmap& bitmap = slot->bitmap;
+    FT_Glyph_Metrics& metrics = slot->metrics;
 
-    fontInfo.var = character;
-    fontInfo.left = left;
-    fontInfo.top = top;
-    fontInfo.height = bitmap.rows;
-    fontInfo.width = bitmap.width;
+    fontInfo.character = character;
+    fontInfo.horiBearingX = metrics.horiBearingX >> 6;
+    fontInfo.horiBearingY = metrics.horiBearingY >> 6;
+    fontInfo.height = metrics.height >> 6;
+    fontInfo.width = metrics.width >> 6;
+    fontInfo.horiAdvance = metrics.horiAdvance >> 6;
     fontInfo.len = fontInfo.height * fontInfo.width;
     fontInfo.addr = new uint8_t[fontInfo.len];
+
     std::memcpy(fontInfo.addr, bitmap.buffer, fontInfo.len);
     fontList.push_back(fontInfo);
 }
@@ -95,7 +102,7 @@ int32_t getMaxWidth(std::string time_string) {
     for (auto ts_it = time_string.begin(); ts_it != time_string.end(); ts_it++) {
         auto font_it = find(*ts_it);
         if (font_it != fontList.end()) {
-            maxWidth = std::max(maxWidth, font_it->width);
+            maxWidth = std::max(maxWidth, font_it->horiAdvance);
         }
     }
 
@@ -113,10 +120,7 @@ int32_t getTotalWidth(std::string time_string) {
     for (auto ts_it = time_string.begin(); ts_it != time_string.end(); ts_it++) {
         auto font_it = find(*ts_it);
         if (font_it != fontList.end()) {
-            totalWidth += font_it->width;
-            if (0 == font_it->width) {
-                totalWidth += maxWidth;
-            }
+            totalWidth += font_it->horiAdvance;
         }
     }
 
@@ -146,21 +150,23 @@ bool toFile(std::string fname, std::string time_string) {
 
     for (auto var = time_string.begin(); var != time_string.end(); var++) {
         auto it = find(*var);
-        int32_t charWidth = (0 == it->width) ? maxWidth : it->width;
-        bytesPerCopy = charWidth * bytesPerPixel;
-        startByte = copydRowBytes;
+//        int32_t charWidth = (0 == it->width) ? maxWidth : it->width;
+        bytesPerCopy = it->width * bytesPerPixel;
+        startByte = copydRowBytes + it->horiBearingX;
 
-        cout <<"character:" <<*var <<", width:" <<charWidth <<", height:" <<it->height <<", left:" <<it->left <<", top:" <<it->top <<endl;
+        cout <<"character:" <<*var <<", width:" <<it->width /* charWidth */ <<", height:" <<it->height <<", horiBearingX:"
+             <<it->horiBearingX <<", horiBearingY:" <<it->horiBearingY <<", horiAdvance:" <<it->horiAdvance <<endl;
+
         if (it != fontList.end()) {
             for (int32_t row = 0; row < maxHeight; row++) {
-                if (0 == it->width || row >= it->height) {
+                if (0 == bytesPerCopy || row >= it->height) {
                     break;
                 }
 
                 std::memcpy(image + startByte, it->addr + row * bytesPerCopy, bytesPerCopy);
                 startByte += stride;
             }
-            copydRowBytes += bytesPerCopy;
+            copydRowBytes += it->horiAdvance;
         } else {
             cout <<"character:" <<*var <<" not found!" <<endl;
         }
@@ -222,11 +228,13 @@ int main(int argc, char**  argv )
         }
 
         FT_GlyphSlot slot = face->glyph;
+        insert(slot, *it);
+//
 //        FT_BBox& bbox = face->bbox;
 //        FT_Glyph_Metrics&  metrics = slot->metrics;
-        FT_Bitmap& bitmap = slot->bitmap;
+//        FT_Bitmap& bitmap = slot->bitmap;
 //        FT_Vector& advance = slot->advance;
-
+//
 //        cout <<"character:" <<*it <<endl;
 //        cout <<"[slot]" <<"bitmap_left:" <<slot->bitmap_left <<", bitmap_top:" <<slot->bitmap_top <<endl;
 //        cout <<"[face]" <<"height:" <<face->height <<", size:" <<face->size <<endl;
@@ -237,8 +245,6 @@ int main(int argc, char**  argv )
 //        cout <<"[advance]" <<"x:" <<advance.x <<", y:" <<advance.y <<endl;
 //        cout <<"[bitmap]" <<"width:" <<bitmap.width <<", rows:" <<bitmap.rows <<", num_grays:" <<bitmap.num_grays <<endl;
 //        cout <<"\n" <<endl;
-
-        insert(bitmap, *it, slot->bitmap_left, slot->bitmap_top);
     }
 
     FT_Done_Face(face);
