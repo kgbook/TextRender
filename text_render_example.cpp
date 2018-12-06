@@ -85,12 +85,31 @@ void destory() {
     delete [] image;
 }
 
-int32_t getMaxHeight(std::string time_string) {
-    int32_t maxHeight = -1;
+int32_t getMaxBeringY(std::string time_string) {
+    int32_t maxBeringY = -1;
     for (auto ts_it = time_string.begin(); ts_it != time_string.end(); ts_it++) {
         auto font_it = find(*ts_it);
         if (font_it != fontList.end()) {
-            maxHeight = std::max(maxHeight, font_it->height);
+            maxBeringY = std::max(maxBeringY, font_it->horiBearingY);
+        }
+    }
+
+    return maxBeringY;
+}
+
+int32_t getMaxHeight(std::string time_string) {
+    int32_t maxHeight = -1;
+    int32_t maxBeringY = getMaxBeringY(time_string);
+
+    if (maxBeringY < 1) {
+        return maxHeight;
+    }
+
+    for (auto ts_it = time_string.begin(); ts_it != time_string.end(); ts_it++) {
+        auto font_it = find(*ts_it);
+        auto height = maxBeringY - font_it->horiBearingY + font_it->height;
+        if (font_it != fontList.end()) {
+            maxHeight = std::max(maxHeight, height);
         }
     }
 
@@ -127,59 +146,66 @@ int32_t getTotalWidth(std::string time_string) {
     return totalWidth;
 }
 
-bool toFile(std::string fname, std::string time_string) {
+int32_t toBitmapMem(std::string time_string) {
     int32_t maxHeight = getMaxHeight(time_string);
     int32_t totalWidth = getTotalWidth(time_string);
-    int32_t maxWidth = getMaxWidth(time_string);
+    int32_t maxHoriBeringY = getMaxBeringY(time_string);
     int32_t bytesPerPixel = 1; //8bpp
     int32_t stride = totalWidth * bytesPerPixel;
     int32_t startByte = 0;
-    int32_t copydRowBytes = 0;
     int32_t bytesPerCopy = 0;
+    int32_t copydRowBytes = 0;
 
-    if (maxHeight < 0 || 0 == totalWidth) {
-        return false;
+    if (maxHeight < 0 || maxHoriBeringY < 0 || 0 == totalWidth) {
+        return -1;
     }
 
-    unsigned char *image = new unsigned char [2 * maxHeight * totalWidth];
+    image = new unsigned char [maxHeight * totalWidth];
+    std::memset(image, 0, maxHeight * totalWidth);
+    for (auto var = time_string.begin(); var != time_string.end(); var++) {
+        auto it = find(*var);
+        auto startRow = maxHoriBeringY - it->horiBearingY;
+        bytesPerCopy = it->width * bytesPerPixel;
+        startByte = copydRowBytes + it->horiBearingX;
+
+        if (it != fontList.end()) {
+            for (int32_t row = 0; row < maxHeight; row++) {
+                if (0 == bytesPerCopy) {
+                    break;
+                }
+
+                if (row >= startRow && row < (startRow + it->height)) {
+                    std::memcpy(image + startByte, it->addr + (row - startRow) * bytesPerCopy, bytesPerCopy);
+                }
+                startByte += stride;
+            }
+            copydRowBytes += it->horiAdvance;
+        } else {
+            cout <<"character:" <<*var <<" not found!" <<endl;
+            return -1;
+        }
+    }
+    return (maxHeight * stride);
+}
+
+bool toBitmapFile(std::string fname, std::string time_string) {
     int fd = open(fname.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0755);
     if (fd < 0) {
         cout <<"open failed! " <<fname <<", " <<strerror(errno) <<endl;
         return false;
     }
 
-    for (auto var = time_string.begin(); var != time_string.end(); var++) {
-        auto it = find(*var);
-//        int32_t charWidth = (0 == it->width) ? maxWidth : it->width;
-        bytesPerCopy = it->width * bytesPerPixel;
-        startByte = copydRowBytes + it->horiBearingX;
-
-        cout <<"character:" <<*var <<", width:" <<it->width /* charWidth */ <<", height:" <<it->height <<", horiBearingX:"
-             <<it->horiBearingX <<", horiBearingY:" <<it->horiBearingY <<", horiAdvance:" <<it->horiAdvance <<endl;
-
-        if (it != fontList.end()) {
-            for (int32_t row = 0; row < maxHeight; row++) {
-                if (0 == bytesPerCopy || row >= it->height) {
-                    break;
-                }
-
-                std::memcpy(image + startByte, it->addr + row * bytesPerCopy, bytesPerCopy);
-                startByte += stride;
-            }
-            copydRowBytes += it->horiAdvance;
-        } else {
-            cout <<"character:" <<*var <<" not found!" <<endl;
-        }
+    int32_t len = toBitmapMem(time_string);
+    if (len < 0) {
+        return false;
     }
 
-    int32_t num = write(fd, image, maxHeight * stride);
-    if (num != maxHeight * stride) {
+    int32_t num = write(fd, image, len);
+    if (num != len) {
         cout<<"write failed!" <<endl;
         return false;
     }
     close(fd);
-
-    cout<<"totalWidth:" <<totalWidth <<", maxHeight:" <<maxHeight <<endl;
 
     return true;
 }
@@ -229,28 +255,12 @@ int main(int argc, char**  argv )
 
         FT_GlyphSlot slot = face->glyph;
         insert(slot, *it);
-//
-//        FT_BBox& bbox = face->bbox;
-//        FT_Glyph_Metrics&  metrics = slot->metrics;
-//        FT_Bitmap& bitmap = slot->bitmap;
-//        FT_Vector& advance = slot->advance;
-//
-//        cout <<"character:" <<*it <<endl;
-//        cout <<"[slot]" <<"bitmap_left:" <<slot->bitmap_left <<", bitmap_top:" <<slot->bitmap_top <<endl;
-//        cout <<"[face]" <<"height:" <<face->height <<", size:" <<face->size <<endl;
-//        cout <<"[bbox]" <<"xMax:" <<bbox.xMax <<", xMin:" <<bbox.xMin <<", yMax:" <<bbox.yMax <<", yMin:" <<bbox.yMin <<endl;
-//        cout <<"[metrics]" <<"width:" <<metrics.width <<", height:" <<metrics.height <<endl
-//             <<"horiBearingX:" <<metrics.horiBearingX <<", horiBearingY:" <<metrics.horiBearingY <<", horiAdvance:" <<metrics.horiAdvance <<endl
-//             <<"vertBearingX:" <<metrics.vertBearingX <<", vertBearingY:" <<metrics.vertBearingY <<", vertAdvance:" <<metrics.vertAdvance <<endl;
-//        cout <<"[advance]" <<"x:" <<advance.x <<", y:" <<advance.y <<endl;
-//        cout <<"[bitmap]" <<"width:" <<bitmap.width <<", rows:" <<bitmap.rows <<", num_grays:" <<bitmap.num_grays <<endl;
-//        cout <<"\n" <<endl;
     }
 
     FT_Done_Face(face);
     FT_Done_FreeType(library);
 
-    toFile(fname, time_str);
+    toBitmapFile(fname, time_str);
     destory();
 
     return 0;
