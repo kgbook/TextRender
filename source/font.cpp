@@ -89,7 +89,7 @@ bool Font::toBitmapFile(std::string fname, std::string time_string) {
         return false;
     }
 
-    int32_t num = write(fd, image.addr_, len);
+    auto num = write(fd, image.addr_, len);
     if (num != len) {
         cout<<"write failed!" <<endl;
         return false;
