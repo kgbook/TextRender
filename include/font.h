@@ -83,10 +83,6 @@ private:
 
     int32_t max_height_;
 
-//    ARGB1555Pixel* argb1555_bitmap_;
-
-//    int32_t bytes_per_pixel_;
-
     FT_Library  library_;
 
     FT_Face     face_;
