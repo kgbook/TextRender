@@ -33,16 +33,16 @@ enum class PixelFormat {
 };
 
 struct RGB8BPPPixel {
-    uint8_t red :3;
-    uint8_t green :3;
     uint8_t blue :2;
+    uint8_t green :3;
+    uint8_t red :3;
 };
 
 struct ARGB1555Pixel {
-    uint16_t alpha:1;
     uint16_t blue:5;
     uint16_t green:5;
     uint16_t red:5;
+    uint16_t alpha:1;
 };
 
 #endif //TEXTRENDER_RGB_PIXEL_H
