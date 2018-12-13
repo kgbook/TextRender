@@ -16,9 +16,11 @@ using std::endl;
 using namespace Exception;
 
 Font::Font(std::string path) {
+    runtimeAssert("such file not exist!", (path.length() > 1) && (0 == access(path.c_str(), F_OK)));
     runtimeAssert("FT_Init_FreeType failed!", 0 == FT_Init_FreeType(&library));
     runtimeAssert("FT_New_Face failed!", 0 == FT_New_Face(library, path.c_str(), 0, &face));
     std::memset(&image, 0, sizeof(image));
+    argb1555_bitmap = nullptr;
 }
 
 Font::~Font() {
@@ -85,15 +87,27 @@ bool Font::toBitmapFile(std::string fname, std::string time_string) {
     }
 
     int32_t len = toBitmapMem(time_string);
-    if (len < 0) {
+    if (len < 1) {
+        return false;
+    }
+#if 0
+    if (convert(PixelFormat::ARGB1555) < 0) {
+        cout <<"convert failed!" <<endl;
         return false;
     }
 
-    auto num = write(fd, image.addr_, len);
-    if (num != len) {
-        cout<<"write failed!" <<endl;
+    auto num = write(fd, argb1555_bitmap, image.width_ * image.height_ * sizeof(ARGB1555Box));
+    if (num != (image.width_ * image.height_ * sizeof(ARGB1555Box))) {
+        cout<<"write failed! " <<endl;
         return false;
     }
+#else
+    auto num = write(fd, image.addr_, image.len_);
+    if (num != image.len_) {
+        cout<<"write failed! " <<endl;
+        return false;
+    }
+#endif
     close(fd);
 
     return true;
@@ -157,7 +171,7 @@ bool Font::enroll(char character) {
     fontInfo.bitmap_.height_ = metrics.height >> 6;
     fontInfo.bitmap_.width_ = metrics.width >> 6;
     fontInfo.bitmap_.len_ = fontInfo.bitmap_.width_ * fontInfo.bitmap_.height_;
-    fontInfo.bitmap_.addr_ = new uint8_t[fontInfo.bitmap_.len_];
+    fontInfo.bitmap_.addr_ = new RGB8BPPBox[fontInfo.bitmap_.len_];
 
     std::memcpy(fontInfo.data(), bitmap.buffer, fontInfo.length());
     font_map_.insert(std::make_pair(character, fontInfo));
@@ -226,10 +240,10 @@ int32_t Font::getTotalWidth(std::string time_string) {
     return total_width;
 }
 
-bool Font::createBitmap(int32_t total_width, int32_t max_height, BitmapDepth depth) {
-    switch (depth) {
-        case BitmapDepth::kColorDepth_8 : {
-            bytes_per_pixel_ = 1;
+bool Font::createBitmap(int32_t total_width, int32_t max_height, PixelFormat pixel_format) {
+    switch (pixel_format) {
+        case PixelFormat::RGB8BPP : {
+            bytes_per_pixel_ = sizeof(RGB8BPPBox);
             break;
         }
 
@@ -243,7 +257,10 @@ bool Font::createBitmap(int32_t total_width, int32_t max_height, BitmapDepth dep
     }
 
     auto len_ = total_width * max_height * bytes_per_pixel_;
-    image.addr_ = new uint8_t[len_];
+    image.len_ = len_;
+    image.width_ = total_width;
+    image.height_ = max_height;
+    image.addr_ = new RGB8BPPBox[len_];
     std::memset(image.addr_, 0, len_);
 
     return true;
@@ -258,5 +275,42 @@ void Font::destroyBitmap() {
     if (nullptr != image.addr_) {
         delete [] (image.addr_);
         image.addr_ = nullptr;
+    }
+
+    if (nullptr != argb1555_bitmap) {
+        delete[](argb1555_bitmap);
+        argb1555_bitmap = nullptr;
+    }
+}
+
+int64_t Font::convert_to_argb1555() {
+    if (nullptr != argb1555_bitmap) {
+        delete[](argb1555_bitmap);
+    }
+    argb1555_bitmap = new ARGB1555Box[image.width_ * image.height_];
+    std::memset(argb1555_bitmap, 0, image.width_ * image.height_ * sizeof(ARGB1555Box));
+
+    for (int32_t row = 0; row < image.height_; row++) {
+        for (int32_t col = 0; col < image.width_; col++) {
+//            ARGB1555Box &box = argb1555_bitmap[row * image.width_ + col];
+//            box.red = image.addr_->red << 2;
+//            box.green = image.addr_->green <<2;
+//            box.blue = image.addr_->blue <<3;
+//            box.alpha = true;
+        }
+    }
+
+    return (image.width_ * image.height_ *sizeof(ARGB1555Box));
+}
+
+int64_t Font::convert(Font::PixelFormat pixel_format) {
+    switch (pixel_format) {
+        case PixelFormat::ARGB1555: {
+            return convert_to_argb1555();
+        }
+
+        default: {
+            return -1;
+        }
     }
 }

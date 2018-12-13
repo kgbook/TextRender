@@ -16,34 +16,52 @@
 #include <freetype/ftglyph.h>
 
 class Font {
-public:
-    Font(std::string path);
-
-    ~Font();
-
-    bool setFontSize(int32_t font_size);
-
-    bool toBitmapFile(std::string fname, std::string time_string);
-
-    int32_t toBitmapMem(std::string time_string);
-
 private:
-    enum class BitmapDepth {
-        kColorDepth_1,
-        kColorDepth_2,
-        kColorDepth_3,
-        kColorDepth_4,
-        kColorDepth_5,
-        kColorDepth_6,
-        kColorDepth_8,
-        kColorDepth_12,
+    enum class PixelFormat {
+        RGB444,
+        RGB555,
+        RGB565,
+        RGB888,
 
-        /* BitmapDepth::kSize is the max value of the enum,  sometimes it indicates an error if return value is kSize */
-            kSize
+        BGR444,
+        BGR555,
+        BGR565,
+        BGR888,
+
+        ARGB1555,
+        ARGB4444,
+        ARGB8565,
+        ARGB8888,
+
+        ABGR1555,
+        ABGR4444,
+        ABGR8565,
+        ABGR8888,
+
+        RGB8BPP,
+        RGB10BPP,
+        RGB12BPP,
+        RGB14BPP,
+        RGB16BPP,
+
+        kSize /* kSize is the max value of the enum,  sometimes it indicates an error if return value is kSize */
+    };
+
+    struct RGB8BPPBox {
+        uint8_t red :3;
+        uint8_t green :3;
+        uint8_t blue :2;
+    };
+
+    struct ARGB1555Box {
+        uint16_t alpha:1;
+        uint16_t red:5;
+        uint16_t green:5;
+        uint16_t blue:5;
     };
 
     struct BitmapInfo {
-        uint8_t *addr_;
+        RGB8BPPBox *addr_;
 
         int32_t width_;
 
@@ -74,6 +92,17 @@ private:
         }
     };
 
+public:
+    Font(std::string path);
+
+    ~Font();
+
+    bool setFontSize(int32_t font_size);
+
+    bool toBitmapFile(std::string fname, std::string time_string);
+
+    int32_t toBitmapMem(std::string time_string);
+
 private:
     int32_t getTotalWidth(std::string time_string);
 
@@ -89,12 +118,18 @@ private:
 
     bool enroll(const std::string text);
 
-    bool createBitmap(int32_t total_width, int32_t max_height, BitmapDepth depth = BitmapDepth::kColorDepth_8);
+    bool createBitmap(int32_t total_width, int32_t max_height, PixelFormat pixel_format = PixelFormat::RGB8BPP);
 
     void destroyBitmap();
 
+    int64_t convert(PixelFormat pixel_format);
+
+    int64_t convert_to_argb1555();
+
 private:
     BitmapInfo image;
+
+    ARGB1555Box* argb1555_bitmap;
 
     int32_t bytes_per_pixel_;
 

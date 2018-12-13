@@ -3,9 +3,9 @@
 
 int main(int argc, char**  argv )
 {
-    Font* font = new Font(std::string("../font/FangZhengKaiTiJianTi-1.ttf"));
+    Font* font = new Font(std::string("../font/TimesNewRoman.ttf"));
 
-    if (!font->setFontSize(46)) {
+    if (!font->setFontSize(60)) {
         std::cout <<"setFontSize failed!" <<std::endl;
         return -1;
     }
