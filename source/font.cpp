@@ -173,7 +173,7 @@ bool Font::enroll(char character) {
     fontInfo.bitmap_.height_ = metrics.height >> 6;
     fontInfo.bitmap_.width_ = metrics.width >> 6;
     fontInfo.bitmap_.len_ = fontInfo.bitmap_.width_ * fontInfo.bitmap_.height_;
-    fontInfo.bitmap_.addr_ = new RGB8BPPBox[fontInfo.bitmap_.len_];
+    fontInfo.bitmap_.addr_ = new RGB8BPPPixel[fontInfo.bitmap_.len_];
 
     std::memcpy(fontInfo.data(), bitmap.buffer, fontInfo.length());
     font_map_.insert(std::make_pair(character, fontInfo));
@@ -245,7 +245,7 @@ int32_t Font::getTotalWidth(std::string time_string) {
 bool Font::createBitmap(int32_t total_width, int32_t max_height, PixelFormat pixel_format) {
     switch (pixel_format) {
         case PixelFormat::RGB8BPP : {
-            bytes_per_pixel_ = sizeof(RGB8BPPBox);
+            bytes_per_pixel_ = sizeof(RGB8BPPPixel);
             break;
         }
 
@@ -262,7 +262,7 @@ bool Font::createBitmap(int32_t total_width, int32_t max_height, PixelFormat pix
     image.len_ = len_;
     image.width_ = total_width;
     image.height_ = max_height;
-    image.addr_ = new RGB8BPPBox[len_];
+    image.addr_ = new RGB8BPPPixel[len_];
     std::memset(image.addr_, 0, len_);
 
     return true;
@@ -286,19 +286,19 @@ void Font::destroyBitmap() {
 }
 
 int64_t Font::convert_to_argb1555() {
-    auto len = image.width_ * image.height_ * sizeof(ARGB1555Box);
-    auto rgb8pp_image_stride = image.width_ *sizeof(RGB8BPPBox);
+    auto len = image.width_ * image.height_ * sizeof(ARGB1555Pixel);
+    auto rgb8pp_image_stride = image.width_ *sizeof(RGB8BPPPixel);
 
     if (nullptr != argb1555_bitmap) {
         delete[](argb1555_bitmap);
     }
-    argb1555_bitmap = new ARGB1555Box[image.width_ * image.height_];
+    argb1555_bitmap = new ARGB1555Pixel[image.width_ * image.height_];
     std::memset(argb1555_bitmap, 0, len);
 
     for (int32_t row = 0; row < image.height_; row++) {
         for (int32_t col = 0; col < image.width_; col++) {
-            ARGB1555Box &argb1555_box = argb1555_bitmap[row * image.width_ + col];
-            RGB8BPPBox &rgb8pp_box = image.addr_[rgb8pp_image_stride * row + col];
+            ARGB1555Pixel &argb1555_box = argb1555_bitmap[row * image.width_ + col];
+            RGB8BPPPixel &rgb8pp_box = image.addr_[rgb8pp_image_stride * row + col];
             argb1555_box.red = rgb8pp_box.red << 2 | (rgb8pp_box.red >> 1);
             argb1555_box.green = rgb8pp_box.green <<2 | (rgb8pp_box.green >> 1);
             argb1555_box.blue = rgb8pp_box.blue <<3 | (rgb8pp_box.blue << 1);

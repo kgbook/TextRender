@@ -47,13 +47,13 @@ private:
         kSize /* kSize is the max value of the enum,  sometimes it indicates an error if return value is kSize */
     };
 
-    struct RGB8BPPBox {
+    struct RGB8BPPPixel {
         uint8_t red :3;
         uint8_t green :3;
         uint8_t blue :2;
     };
 
-    struct ARGB1555Box {
+    struct ARGB1555Pixel {
         uint16_t alpha:1;
         uint16_t blue:5;
         uint16_t green:5;
@@ -61,7 +61,7 @@ private:
     };
 
     struct BitmapInfo {
-        RGB8BPPBox *addr_;
+        RGB8BPPPixel *addr_;
 
         int32_t width_;
 
@@ -129,7 +129,7 @@ private:
 private:
     BitmapInfo image;
 
-    ARGB1555Box* argb1555_bitmap;
+    ARGB1555Pixel* argb1555_bitmap;
 
     int32_t bytes_per_pixel_;
 
