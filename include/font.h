@@ -43,7 +43,7 @@ private:
     };
 
 public:
-    Font(std::string path, PixelFormat pixel_format = PixelFormat::RGB8BPP);
+    Font(std::string path);
 
     ~Font();
 

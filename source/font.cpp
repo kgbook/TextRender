@@ -15,8 +15,7 @@ using std::cout;
 using std::endl;
 using namespace Exception;
 
-Font::Font(std::string path, PixelFormat pixel_format)
-    : pixel_format_(pixel_format) {
+Font::Font(std::string path){
     runtimeAssert("such file not exist!", (path.length() > 1) && (0 == access(path.c_str(), F_OK)));
     runtimeAssert("FT_Init_FreeType failed!", 0 == FT_Init_FreeType(&library_));
     runtimeAssert("FT_New_Face failed!", 0 == FT_New_Face(library_, path.c_str(), 0, &face_));
