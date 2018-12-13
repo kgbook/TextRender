@@ -15,63 +15,13 @@
 #include <freetype/freetype.h>
 #include <freetype/ftglyph.h>
 
+#include "rgb_pixel.h"
+#include "font_bitmap.h"
+
 class Font {
 private:
-    enum class PixelFormat {
-        RGB444,
-        RGB555,
-        RGB565,
-        RGB888,
-
-        BGR444,
-        BGR555,
-        BGR565,
-        BGR888,
-
-        ARGB1555,
-        ARGB4444,
-        ARGB8565,
-        ARGB8888,
-
-        ABGR1555,
-        ABGR4444,
-        ABGR8565,
-        ABGR8888,
-
-        RGB8BPP,
-        RGB10BPP,
-        RGB12BPP,
-        RGB14BPP,
-        RGB16BPP,
-
-        kSize /* kSize is the max value of the enum,  sometimes it indicates an error if return value is kSize */
-    };
-
-    struct RGB8BPPPixel {
-        uint8_t red :3;
-        uint8_t green :3;
-        uint8_t blue :2;
-    };
-
-    struct ARGB1555Pixel {
-        uint16_t alpha:1;
-        uint16_t blue:5;
-        uint16_t green:5;
-        uint16_t red:5;
-    };
-
-    struct BitmapInfo {
-        RGB8BPPPixel *addr_;
-
-        int32_t width_;
-
-        int32_t height_;
-
-        int32_t len_;
-    };
-
     struct FontInfo {
-        BitmapInfo bitmap_;
+        std::shared_ptr<FontBitmap> bitmap_;
 
         int32_t horiBearingX_;
 
@@ -80,11 +30,11 @@ private:
         int32_t horiAdvance_;
 
         void *data() {
-            return bitmap_.addr_;
+            return bitmap_->data();
         }
 
         int32_t length() {
-            return ((nullptr == data()) ? 0 : bitmap_.len_);
+            return ((nullptr == data()) ? 0 : bitmap_->length());
         }
 
         int32_t size() {
@@ -93,15 +43,17 @@ private:
     };
 
 public:
-    Font(std::string path);
+    Font(std::string path, PixelFormat pixel_format = PixelFormat::RGB8BPP);
 
     ~Font();
 
     bool setFontSize(int32_t font_size);
 
-    bool toBitmapFile(std::string fname, std::string time_string);
+    bool toBitmapFile(std::string fname, std::string time_string, PixelFormat pixel_format = PixelFormat::RGB8BPP);
 
-    int32_t toBitmapMem(std::string time_string);
+    std::shared_ptr<FontBitmap> toBitmapMem(std::string time_string);
+
+    std::shared_ptr<FontBitmap> convert(PixelFormat pixel_format);
 
 private:
     int32_t getTotalWidth(std::string time_string);
@@ -118,20 +70,22 @@ private:
 
     bool enroll(const std::string text);
 
-    bool createBitmap(int32_t total_width, int32_t max_height, PixelFormat pixel_format = PixelFormat::RGB8BPP);
-
-    void destroyBitmap();
-
-    int64_t convert(PixelFormat pixel_format);
-
-    int64_t convert_to_argb1555();
+    std::shared_ptr<FontBitmap> rgb8pp_to_argb1555();
 
 private:
-    BitmapInfo image_;
+    std::shared_ptr<FontBitmap> src_img_;
 
-    ARGB1555Pixel* argb1555_bitmap_;
+    std::shared_ptr<FontBitmap> dst_img_;
 
-    int32_t bytes_per_pixel_;
+    PixelFormat  pixel_format_;
+
+    int32_t total_width_;
+
+    int32_t max_height_;
+
+//    ARGB1555Pixel* argb1555_bitmap_;
+
+//    int32_t bytes_per_pixel_;
 
     FT_Library  library_;
 
