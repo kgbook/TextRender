@@ -127,17 +127,17 @@ private:
     int64_t convert_to_argb1555();
 
 private:
-    BitmapInfo image;
+    BitmapInfo image_;
 
-    ARGB1555Pixel* argb1555_bitmap;
+    ARGB1555Pixel* argb1555_bitmap_;
 
     int32_t bytes_per_pixel_;
 
-    FT_Library  library;
+    FT_Library  library_;
 
-    FT_Face     face;
+    FT_Face     face_;
 
-    FT_Glyph    glyph;
+    FT_Glyph    glyph_;
 
     int32_t font_size_;
 

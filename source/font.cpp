@@ -17,20 +17,20 @@ using namespace Exception;
 
 Font::Font(std::string path) {
     runtimeAssert("such file not exist!", (path.length() > 1) && (0 == access(path.c_str(), F_OK)));
-    runtimeAssert("FT_Init_FreeType failed!", 0 == FT_Init_FreeType(&library));
-    runtimeAssert("FT_New_Face failed!", 0 == FT_New_Face(library, path.c_str(), 0, &face));
-    std::memset(&image, 0, sizeof(image));
-    argb1555_bitmap = nullptr;
+    runtimeAssert("FT_Init_FreeType failed!", 0 == FT_Init_FreeType(&library_));
+    runtimeAssert("FT_New_Face failed!", 0 == FT_New_Face(library_, path.c_str(), 0, &face_));
+    std::memset(&image_, 0, sizeof(image_));
+    argb1555_bitmap_ = nullptr;
 }
 
 Font::~Font() {
-    FT_Done_Face(face);
-    FT_Done_FreeType(library);
+    FT_Done_Face(face_);
+    FT_Done_FreeType(library_);
     destroyBitmap();
 }
 
 bool Font::setFontSize(int32_t font_size) {
-    return (0 == FT_Set_Pixel_Sizes(face, 0, font_size));
+    return (0 == FT_Set_Pixel_Sizes(face_, 0, font_size));
 }
 
 int32_t Font::toBitmapMem(std::string time_string) {
@@ -64,7 +64,7 @@ int32_t Font::toBitmapMem(std::string time_string) {
                 }
 
                 if (row >= start_row && row < (start_row + it->second.bitmap_.height_)) {
-                    std::memcpy(image.addr_ + start_byte, it->second.bitmap_.addr_ + (row - start_row) * bytes_per_copy, bytes_per_copy);
+                    std::memcpy(image_.addr_ + start_byte, it->second.bitmap_.addr_ + (row - start_row) * bytes_per_copy, bytes_per_copy);
                 }
                 start_byte += stride;
             }
@@ -98,14 +98,14 @@ bool Font::toBitmapFile(std::string fname, std::string time_string) {
         return false;
     }
 
-    auto num = write(fd, argb1555_bitmap, len);
+    auto num = write(fd, argb1555_bitmap_, len);
     if (num != len) {
         cout<<"write failed! " <<endl;
         return false;
     }
 #else // 8bpp
-    auto num = write(fd, image.addr_, image.len_);
-    if (num != image.len_) {
+    auto num = write(fd, image_.addr_, image_.len_);
+    if (num != image_.len_) {
         cout<<"write failed! " <<endl;
         return false;
     }
@@ -146,18 +146,18 @@ bool Font::enroll(char character) {
         return true;
     }
 
-    if (0 != FT_Load_Char(face, character, FT_LOAD_DEFAULT)) {
+    if (0 != FT_Load_Char(face_, character, FT_LOAD_DEFAULT)) {
         cout <<"FT_Load_Char failed!" <<endl;
         return false;
     }
 
-    if (0 != FT_Get_Glyph(face->glyph, &glyph))  {
+    if (0 != FT_Get_Glyph(face_->glyph, &glyph_))  {
         cout <<"FT_Set_Pixel_Sizes failed!" <<endl;
         return false;
     }
 
-    FT_GlyphSlot& slot = face->glyph;
-    if (FT_GLYPH_FORMAT_BITMAP != glyph->format) {
+    FT_GlyphSlot& slot = face_->glyph;
+    if (FT_GLYPH_FORMAT_BITMAP != glyph_->format) {
         if (0 != FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL)) {
             cout << "FT_Glyph_To_Bitmap failed!" <<endl;
             return false;
@@ -254,16 +254,16 @@ bool Font::createBitmap(int32_t total_width, int32_t max_height, PixelFormat pix
         }
     }
 
-    if (nullptr != image.addr_) {
+    if (nullptr != image_.addr_) {
         destroyBitmap();
     }
 
     auto len_ = total_width * max_height * bytes_per_pixel_;
-    image.len_ = len_;
-    image.width_ = total_width;
-    image.height_ = max_height;
-    image.addr_ = new RGB8BPPPixel[len_];
-    std::memset(image.addr_, 0, len_);
+    image_.len_ = len_;
+    image_.width_ = total_width;
+    image_.height_ = max_height;
+    image_.addr_ = new RGB8BPPPixel[len_];
+    std::memset(image_.addr_, 0, len_);
 
     return true;
 }
@@ -274,31 +274,31 @@ void Font::destroyBitmap() {
         it = font_map_.erase(it);
     }
 
-    if (nullptr != image.addr_) {
-        delete [] (image.addr_);
-        image.addr_ = nullptr;
+    if (nullptr != image_.addr_) {
+        delete [] (image_.addr_);
+        image_.addr_ = nullptr;
     }
 
-    if (nullptr != argb1555_bitmap) {
-        delete[](argb1555_bitmap);
-        argb1555_bitmap = nullptr;
+    if (nullptr != argb1555_bitmap_) {
+        delete[](argb1555_bitmap_);
+        argb1555_bitmap_ = nullptr;
     }
 }
 
 int64_t Font::convert_to_argb1555() {
-    auto len = image.width_ * image.height_ * sizeof(ARGB1555Pixel);
-    auto rgb8pp_image_stride = image.width_ *sizeof(RGB8BPPPixel);
+    auto len = image_.width_ * image_.height_ * sizeof(ARGB1555Pixel);
+    auto rgb8pp_image_stride = image_.width_ *sizeof(RGB8BPPPixel);
 
-    if (nullptr != argb1555_bitmap) {
-        delete[](argb1555_bitmap);
+    if (nullptr != argb1555_bitmap_) {
+        delete[](argb1555_bitmap_);
     }
-    argb1555_bitmap = new ARGB1555Pixel[image.width_ * image.height_];
-    std::memset(argb1555_bitmap, 0, len);
+    argb1555_bitmap_ = new ARGB1555Pixel[image_.width_ * image_.height_];
+    std::memset(argb1555_bitmap_, 0, len);
 
-    for (int32_t row = 0; row < image.height_; row++) {
-        for (int32_t col = 0; col < image.width_; col++) {
-            ARGB1555Pixel &argb1555_box = argb1555_bitmap[row * image.width_ + col];
-            RGB8BPPPixel &rgb8pp_box = image.addr_[rgb8pp_image_stride * row + col];
+    for (int32_t row = 0; row < image_.height_; row++) {
+        for (int32_t col = 0; col < image_.width_; col++) {
+            ARGB1555Pixel &argb1555_box = argb1555_bitmap_[row * image_.width_ + col];
+            RGB8BPPPixel &rgb8pp_box = image_.addr_[rgb8pp_image_stride * row + col];
             argb1555_box.red = rgb8pp_box.red << 2 | (rgb8pp_box.red >> 1);
             argb1555_box.green = rgb8pp_box.green <<2 | (rgb8pp_box.green >> 1);
             argb1555_box.blue = rgb8pp_box.blue <<3 | (rgb8pp_box.blue << 1);
