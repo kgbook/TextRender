@@ -55,9 +55,9 @@ private:
 
     struct ARGB1555Box {
         uint16_t alpha:1;
-        uint16_t red:5;
-        uint16_t green:5;
         uint16_t blue:5;
+        uint16_t green:5;
+        uint16_t red:5;
     };
 
     struct BitmapInfo {

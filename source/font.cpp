@@ -90,18 +90,20 @@ bool Font::toBitmapFile(std::string fname, std::string time_string) {
     if (len < 1) {
         return false;
     }
-#if 0
-    if (convert(PixelFormat::ARGB1555) < 0) {
+
+#if 1 // ARGB1555
+    len = convert(PixelFormat::ARGB1555);
+    if (len < 0) {
         cout <<"convert failed!" <<endl;
         return false;
     }
 
-    auto num = write(fd, argb1555_bitmap, image.width_ * image.height_ * sizeof(ARGB1555Box));
-    if (num != (image.width_ * image.height_ * sizeof(ARGB1555Box))) {
+    auto num = write(fd, argb1555_bitmap, len);
+    if (num != len) {
         cout<<"write failed! " <<endl;
         return false;
     }
-#else
+#else // 8bpp
     auto num = write(fd, image.addr_, image.len_);
     if (num != image.len_) {
         cout<<"write failed! " <<endl;
@@ -284,23 +286,27 @@ void Font::destroyBitmap() {
 }
 
 int64_t Font::convert_to_argb1555() {
+    auto len = image.width_ * image.height_ * sizeof(ARGB1555Box);
+    auto rgb8pp_image_stride = image.width_ *sizeof(RGB8BPPBox);
+
     if (nullptr != argb1555_bitmap) {
         delete[](argb1555_bitmap);
     }
     argb1555_bitmap = new ARGB1555Box[image.width_ * image.height_];
-    std::memset(argb1555_bitmap, 0, image.width_ * image.height_ * sizeof(ARGB1555Box));
+    std::memset(argb1555_bitmap, 0, len);
 
     for (int32_t row = 0; row < image.height_; row++) {
         for (int32_t col = 0; col < image.width_; col++) {
-//            ARGB1555Box &box = argb1555_bitmap[row * image.width_ + col];
-//            box.red = image.addr_->red << 2;
-//            box.green = image.addr_->green <<2;
-//            box.blue = image.addr_->blue <<3;
-//            box.alpha = true;
+            ARGB1555Box &argb1555_box = argb1555_bitmap[row * image.width_ + col];
+            RGB8BPPBox &rgb8pp_box = image.addr_[rgb8pp_image_stride * row + col];
+            argb1555_box.red = rgb8pp_box.red << 2 | (rgb8pp_box.red >> 1);
+            argb1555_box.green = rgb8pp_box.green <<2 | (rgb8pp_box.green >> 1);
+            argb1555_box.blue = rgb8pp_box.blue <<3 | (rgb8pp_box.blue << 1);
+            argb1555_box.alpha = true;
         }
     }
 
-    return (image.width_ * image.height_ *sizeof(ARGB1555Box));
+    return len;
 }
 
 int64_t Font::convert(Font::PixelFormat pixel_format) {
