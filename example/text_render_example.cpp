@@ -5,7 +5,7 @@
 int main(int argc, char**  argv )
 {
     try {
-        Font* font = new Font(std::string("../font/TimesNewRoman.ttf"));
+        Font* font = new Font(std::string("../../font/TimesNewRoman.ttf"));
 
         if (!font->setFontSize(60)) {
             std::cout <<"setFontSize failed!" <<std::endl;

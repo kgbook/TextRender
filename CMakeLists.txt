@@ -2,9 +2,23 @@ cmake_minimum_required(VERSION 3.10)
 set(PROJECT_NAME TextRender)
 
 project(${PROJECT_NAME})
-set(CMAKE_CXX_STANDARD 11)
 
+set(project_debug 1)
+
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+
+if (project_debug)
+    set(CMAKE_VERBOSE_MAKEFILE ON)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+    add_definitions(-DNDEBUG)
+endif ()
+
 include(cpplint)
 
 find_package(PkgConfig)
@@ -19,10 +33,5 @@ include_directories(include
 
 link_directories(${freetype_LIBRARY_DIRS})
 
-aux_source_directory(${CMAKE_SOURCE_DIR}/source  src)
-
-add_style_check_target(${PROJECT_NAME}-cpplint "${src}")
-
-add_executable(${PROJECT_NAME} ${src})
-
-target_link_libraries(${PROJECT_NAME} ${freetype_LIBRARIES})
+add_subdirectory(source)
+add_subdirectory(example)
