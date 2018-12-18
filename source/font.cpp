@@ -38,6 +38,9 @@ std::shared_ptr<FontBitmap> Font::toBitmapMem(std::string time_string) {
 
     max_height_ = getMaxHeight(time_string);
     total_width_ = getTotalWidth(time_string);
+
+    max_height_ = align(max_height_, 2);
+    total_width_ = align(total_width_, 2);
     int32_t max_horizontal_bering_Y = getMaxBeringY(time_string);
     int32_t start_byte = 0;
     int32_t bytes_per_copy = 0;

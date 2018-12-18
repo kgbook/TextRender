@@ -55,6 +55,11 @@ public:
 
     std::shared_ptr<FontBitmap> convert(PixelFormat pixel_format);
 
+    template <typename T>
+    static T align(T value, unsigned alignment) {
+        return (alignment * ((value + alignment - 1) / alignment));
+    };
+
 private:
     int32_t getTotalWidth(std::string time_string);
 
