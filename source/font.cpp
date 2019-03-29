@@ -247,6 +247,14 @@ std::shared_ptr<FontBitmap> Font::rgb8pp_to_argb1555() {
             argb1555_pixel.red = rgb8pp_box_pixel.red << 2 | (rgb8pp_box_pixel.red >> 1);
             argb1555_pixel.green = rgb8pp_box_pixel.green <<2 | (rgb8pp_box_pixel.green >> 1);
             argb1555_pixel.blue = rgb8pp_box_pixel.blue <<3 | (rgb8pp_box_pixel.blue << 1);
+
+            if (0 != argb1555_pixel.red || 0 != argb1555_pixel.green || 0 != argb1555_pixel.blue) { // whilte
+                argb1555_pixel.red = 0b11111;
+                argb1555_pixel.green = 0b11111;
+                argb1555_pixel.blue = 0b11111;
+            } else { // black
+                memset(&argb1555_pixel, 0, sizeof(argb1555_pixel));
+            }
             argb1555_pixel.alpha = true;
         }
     }
